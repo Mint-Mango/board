@@ -138,13 +138,39 @@ female = [to_number(area[f"여_{lab}"]).sum() for lab in age_labels]
 
 pyramid = pd.DataFrame({"나이": age_labels, "남자": male, "여자": female})
 
-# 요약 숫자 카드
-total_m = int(pyramid["남자"].sum())
-total_f = int(pyramid["여자"].sum())
-m1, m2, m3 = st.columns(3)
-m1.metric("👨 남자", f"{total_m:,}명")
-m2.metric("👩 여자", f"{total_f:,}명")
-m3.metric("🏠 전체", f"{total_m + total_f:,}명")
+# ─────────────────────────────────────────────────────────
+# 4-1. 지표 계산하기
+# ─────────────────────────────────────────────────────────
+# 나이별 전체 인구 (남자 + 여자)
+pyramid["합계"] = pyramid["남자"] + pyramid["여자"]
+# 나이를 숫자로 ('100세 이상'은 100으로 계산해요)
+pyramid["나이숫자"] = [age_number(lab) for lab in pyramid["나이"]]
+
+total_pop = int(pyramid["합계"].sum())                                     # 총인구
+child_pop = int(pyramid.loc[pyramid["나이숫자"] <= 14, "합계"].sum())       # 0~14세 (아이)
+elder_pop = int(pyramid.loc[pyramid["나이숫자"] >= 65, "합계"].sum())       # 65세 이상 (어르신)
+
+if total_pop > 0:
+    # 평균연령 = (나이 × 그 나이 인구)를 모두 더한 값 ÷ 총인구
+    avg_age = (pyramid["나이숫자"] * pyramid["합계"]).sum() / total_pop
+    aging_rate = elder_pop / total_pop * 100                              # 고령화율(%)
+    child_rate = child_pop / total_pop * 100                              # 아이 비율(%)
+else:
+    avg_age = aging_rate = child_rate = 0.0
+
+AGING_WARNING = 20  # 고령화율이 이 값(%)을 넘으면 주의 표시
+
+# ─────────────────────────────────────────────────────────
+# 4-2. 지표 카드 3개 (+ 고령화율이 높으면 옆에 주의 표시)
+# ─────────────────────────────────────────────────────────
+c1, c2, c3, c4 = st.columns([1, 1, 1, 0.9])
+c1.metric("👨‍👩‍👧 총인구", f"{total_pop:,}명")
+c2.metric("🎂 평균연령", f"{avg_age:.1f}세")
+c3.metric("👵 고령화율 (65세 이상)", f"{aging_rate:.1f}%")
+
+with c4:
+    if aging_rate > AGING_WARNING:
+        st.warning(f"⚠️ **주의**\n\n고령화율이 {AGING_WARNING}%를 넘었어요 (초고령 동네)")
 
 # ─────────────────────────────────────────────────────────
 # 5. 인구 피라미드 그리기 (plotly 가로 막대)
@@ -215,9 +241,29 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────
+# 5-1. 한 줄 설명 자동으로 만들기
+#      아이(0~14세) 비율과 어르신(65세 이상) 비율을 비교해요.
+# ─────────────────────────────────────────────────────────
+def make_summary(child_rate, aging_rate, total_pop):
+    if total_pop == 0:
+        return "이 동네는 인구 자료가 없어요."
+    numbers = f"(아이 0~14세 {child_rate:.1f}% · 어르신 65세 이상 {aging_rate:.1f}%)"
+    if aging_rate >= child_rate * 2:
+        return f"👵 이 동네는 **어르신이 아주 많은 편**이에요. 어르신이 아이보다 2배 넘게 많아요. {numbers}"
+    if aging_rate > child_rate:
+        return f"🧓 이 동네는 **어르신이 조금 더 많은 편**이에요. {numbers}"
+    if aging_rate == child_rate:
+        return f"⚖️ 이 동네는 **아이와 어르신이 비슷한 편**이에요. {numbers}"
+    return f"🧒 이 동네는 **아이가 많은 편**이에요. 아이가 어르신보다 많아요. {numbers}"
+
+
+st.info(make_summary(child_rate, aging_rate, total_pop))
+
+# ─────────────────────────────────────────────────────────
 # 6. 숫자 표도 펼쳐서 볼 수 있게 (위가 100세 이상, 아래가 0세 → 그래프와 같은 방향)
 # ─────────────────────────────────────────────────────────
 with st.expander("📋 나이별 인구 숫자 표 보기"):
-    st.dataframe(pyramid.iloc[::-1].reset_index(drop=True), use_container_width=True)
+    table = pyramid[["나이", "남자", "여자", "합계"]].iloc[::-1].reset_index(drop=True)
+    st.dataframe(table, use_container_width=True)
 
 st.caption("자료: Mint-Mango/contents 저장소의 연도별·성별 인구 데이터")
