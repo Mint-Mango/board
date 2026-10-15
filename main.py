@@ -12,7 +12,7 @@ import streamlit as st
 st.set_page_config(page_title="동네별 인구 피라미드", page_icon="🏡", layout="wide")
 
 # 데이터 주소 (zip 압축 CSV지만 pandas가 바로 읽을 수 있어요)
-DATA_URL = "https://raw.githubusercontent.com/Mint-Mango/board/blob/main/population_ts_yearly_gender.zip"
+DATA_URL = "https://raw.githubusercontent.com/first2022-cyber/contents/main/population_ts_yearly_gender.zip"
 
 # 따뜻한 색 (남자: 따뜻한 주황 / 여자: 따뜻한 분홍)
 COLOR_MALE = "#E8833A"
