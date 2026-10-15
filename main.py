@@ -47,7 +47,7 @@ st.markdown("""
 
 DATA_URL = (
     "https://raw.githubusercontent.com/"
-    "Mint-Mango/board/blob/main/data/population_yearly.csv.gz"
+    "greatsong/modudata/main/data/population_yearly.csv.gz"
 )
 
 
